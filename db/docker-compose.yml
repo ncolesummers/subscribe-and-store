@@ -1,0 +1,18 @@
+version: "3.1"
+
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: sabino # Replace 'mycustompassword' with your desired password
+      POSTGRES_USER: postgres # Optional: Replace 'myuser' with your desired username
+      POSTGRES_DB: sabino-ts # Optional: Replace 'mydatabase' with your desired database name
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescaledb-data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+volumes:
+  timescaledb-data:
