@@ -3,14 +3,18 @@ use std::time::Duration;
 use sqlx::postgres::PgPoolOptions;
 use tokio::time;
 use futures::stream::StreamExt;
+use serde_json;
+
 const TOPICS: &[&str] = &["left_arm", "right_arm"];
 const QOS: &[i32] = &[1, 1];
 
+#[derive(serde::Deserialize, serde::Serialize)]
 pub struct ArmMessage {
     pub timestamp: String,
     pub matrices: Arm,
 }
 
+#[derive(serde::Deserialize, serde::Serialize)]
 pub struct FourByFourMatrix {
     pub x: Vec<f64>,
     pub y: Vec<f64>,
@@ -19,6 +23,7 @@ pub struct FourByFourMatrix {
 }
 
 // 9 joints j1-j9 and 6 fingers f1-f6
+#[derive(serde::Deserialize, serde::Serialize)]
 pub struct Arm {
     pub j1: FourByFourMatrix,
     pub j2: FourByFourMatrix,
@@ -37,11 +42,14 @@ pub struct Arm {
     pub f6: FourByFourMatrix,
 }
 
-async fn write_data_to_db(data: &str) -> Result<(), sqlx::Error> {
+async fn write_data_to_db(data: &str, table: &str) -> Result<(), sqlx::Error> {
     let pool = PgPoolOptions::new()
         .connect(&dotenv::var("TIMESCALE_DATABASE_URL").unwrap())
         .await?;
 
+    // Data is a JSON string, so you can parse it into a struct using serde_json
+    let arm: ArmMessage = serde_json::from_str(data)?;
+    
     sqlx::query!("INSERT INTO your_table_name (time, data) VALUES (NOW(), $1)", data)
         .execute(&pool)
         .await?;

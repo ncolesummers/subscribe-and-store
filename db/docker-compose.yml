@@ -5,9 +5,9 @@ services:
     image: timescale/timescaledb:latest-pg16
     restart: always
     environment:
-      POSTGRES_PASSWORD: sabino # Replace 'mycustompassword' with your desired password
-      POSTGRES_USER: postgres # Optional: Replace 'myuser' with your desired username
-      POSTGRES_DB: sabino-ts # Optional: Replace 'mydatabase' with your desired database name
+      POSTGRES_PASSWORD: sabino
+      POSTGRES_USER: postgres
+      POSTGRES_DB: sabino-ts
     ports:
       - "5432:5432"
     volumes:

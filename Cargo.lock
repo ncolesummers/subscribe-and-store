@@ -1414,6 +1414,8 @@ dependencies = [
  "dotenv",
  "futures",
  "paho-mqtt",
+ "serde",
+ "serde_json",
  "sqlx",
  "time",
  "tokio",
