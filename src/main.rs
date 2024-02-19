@@ -6,7 +6,36 @@ use futures::stream::StreamExt;
 const TOPICS: &[&str] = &["left_arm", "right_arm"];
 const QOS: &[i32] = &[1, 1];
 
+pub struct ArmMessage {
+    pub timestamp: String,
+    pub matrices: Arm,
+}
 
+pub struct FourByFourMatrix {
+    pub x: Vec<f64>,
+    pub y: Vec<f64>,
+    pub z: Vec<f64>,
+    pub w: Vec<f64>,
+}
+
+// 9 joints j1-j9 and 6 fingers f1-f6
+pub struct Arm {
+    pub j1: FourByFourMatrix,
+    pub j2: FourByFourMatrix,
+    pub j3: FourByFourMatrix,
+    pub j4: FourByFourMatrix,
+    pub j5: FourByFourMatrix,
+    pub j6: FourByFourMatrix,
+    pub j7: FourByFourMatrix,
+    pub j8: FourByFourMatrix,
+    pub j9: FourByFourMatrix,
+    pub f1: FourByFourMatrix,
+    pub f2: FourByFourMatrix,
+    pub f3: FourByFourMatrix,
+    pub f4: FourByFourMatrix,
+    pub f5: FourByFourMatrix,
+    pub f6: FourByFourMatrix,
+}
 
 async fn write_data_to_db(data: &str) -> Result<(), sqlx::Error> {
     let pool = PgPoolOptions::new()
