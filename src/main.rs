@@ -4,58 +4,71 @@ use sqlx::postgres::PgPoolOptions;
 use tokio::time;
 use futures::stream::StreamExt;
 use serde_json;
+use sqlx::Postgres;
 
 const TOPICS: &[&str] = &["left_arm", "right_arm"];
 const QOS: &[i32] = &[1, 1];
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct ArmMessage {
     pub timestamp: String,
     pub matrices: Arm,
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
-pub struct FourByFourMatrix {
-    pub x: Vec<f64>,
-    pub y: Vec<f64>,
-    pub z: Vec<f64>,
-    pub w: Vec<f64>,
-}
-
 // 9 joints j1-j9 and 6 fingers f1-f6
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct Arm {
-    pub j1: FourByFourMatrix,
-    pub j2: FourByFourMatrix,
-    pub j3: FourByFourMatrix,
-    pub j4: FourByFourMatrix,
-    pub j5: FourByFourMatrix,
-    pub j6: FourByFourMatrix,
-    pub j7: FourByFourMatrix,
-    pub j8: FourByFourMatrix,
-    pub j9: FourByFourMatrix,
-    pub f1: FourByFourMatrix,
-    pub f2: FourByFourMatrix,
-    pub f3: FourByFourMatrix,
-    pub f4: FourByFourMatrix,
-    pub f5: FourByFourMatrix,
-    pub f6: FourByFourMatrix,
+    pub j1: Vec<Vec<f64>>,
+    pub j2: Vec<Vec<f64>>,
+    pub j3: Vec<Vec<f64>>,
+    pub j4: Vec<Vec<f64>>,
+    pub j5: Vec<Vec<f64>>,
+    pub j6: Vec<Vec<f64>>,
+    pub j7: Vec<Vec<f64>>,
+    pub j8: Vec<Vec<f64>>,
+    pub j9: Vec<Vec<f64>>,
+    pub f1: Vec<Vec<f64>>,
+    pub f2: Vec<Vec<f64>>,
+    pub f3: Vec<Vec<f64>>,
+    pub f4: Vec<Vec<f64>>,
+    pub f5: Vec<Vec<f64>>,
+    pub f6: Vec<Vec<f64>>,
 }
 
 async fn write_data_to_db(data: &str, table: &str) -> Result<(), sqlx::Error> {
     let pool = PgPoolOptions::new()
-        .connect(&dotenv::var("TIMESCALE_DATABASE_URL").unwrap())
+        .connect(&dotenv::var("DATABASE_URL").unwrap())
         .await?;
 
+
     // Data is a JSON string, so you can parse it into a struct using serde_json
-    let arm: ArmMessage = serde_json::from_str(data)?;
-    
-    sqlx::query!("INSERT INTO your_table_name (time, data) VALUES (NOW(), $1)", data)
-        .execute(&pool)
-        .await?;
+    let arm: ArmMessage = match serde_json::from_str(data) {
+        Ok(arm) => arm,
+        Err(e) => return Err(sqlx::Error::from(std::io::Error::new(std::io::ErrorKind::InvalidData, e))),
+    };
+
+    insert_data(table, arm, &pool).await?;
 
     Ok(())
 }
+
+async fn insert_data(table: &str, arm: ArmMessage, pool: &sqlx::Pool<Postgres>) -> Result<(), sqlx::Error> {
+    match table {
+        "left_arm" => {
+            sqlx::query!("INSERT INTO left_arm (timestamp, data) VALUES ($1, $2)", arm.timestamp, arm.matrices)
+                .execute(pool)
+                .await?;
+        },
+        "right_arm" => {
+            sqlx::query!("INSERT INTO right_arm (timestamp, data) VALUES ($1, $2)", arm.timestamp, arm.matrices)
+                .execute(pool)
+                .await?;
+        },
+        _ => return Err(sqlx::Error::from(std::io::Error::new(std::io::ErrorKind::InvalidInput, "Invalid table name"))),
+    }
+    Ok(())
+}
+
 
 
 #[tokio::main]
@@ -114,7 +127,7 @@ async fn main() {
     while let Some(msg_opt) = stream.next().await {
         if let Some(msg) = msg_opt {
             println!("Received message: {}", msg);
-            if let Err(e) = write_data_to_db(&msg.payload_str()).await {
+            if let Err(e) = write_data_to_db(&msg.payload_str(), &msg.topic()).await {
                 eprintln!("Failed to write data to DB: {}", e);
             }
         }
