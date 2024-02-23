@@ -1,13 +1,11 @@
-// src/sql.rs
+use sqlx::{Pool, Postgres, postgres::PgPoolOptions};
+use once_cell::sync::Lazy;
+use std::env;
 
-pub mod sql {
-    pub fn establish_connection() {
-        // SQL connection logic here
-    }
+static POOL: Lazy<Pool<Postgres>> = Lazy::new(|| {
+    // Database connection setup...
+});
 
-    pub fn execute_query(query: &str) {
-        // SQL query execution logic here
-    }
-
-    // Other SQL related functions
+pub async fn write_data_to_db(data: &str, table: &str) -> Result<(), sqlx::Error> {
+    // Your data insertion logic...
 }
