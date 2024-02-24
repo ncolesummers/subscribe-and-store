@@ -1,7 +1,7 @@
 // src/mqtt.rs
 use anyhow::Result;
 use paho_mqtt::{
-    AsyncClient, ConnectOptionsBuilder, CreateOptionsBuilder, SubscribeOptions, MQTT_VERSION_5,
+    AsyncClient, ConnectOptionsBuilder, CreateOptionsBuilder, Message, SubscribeOptions, MQTT_VERSION_5, QOS_1,
 };
 use std::time::Duration;
 use tokio::time as tokio_time;
@@ -69,5 +69,12 @@ pub async fn subscribe(client: &AsyncClient, topics: &[&str], qos: &[i32]) -> Re
                 tokio_time::sleep(Duration::from_secs(5)).await;
             }
         }
+    }
+}
+
+async fn publish(client: AsyncClient, message: Vec<u8>, topic: &str) {
+    let msg = Message::new(topic, message, QOS_1);
+    if let Err(e) = client.publish(msg).await {
+        println!("Error publishing the message: {:?}", e);
     }
 }
