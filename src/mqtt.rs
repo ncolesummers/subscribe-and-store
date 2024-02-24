@@ -1,33 +1,37 @@
 // src/mqtt.rs
-use paho_mqtt::{self as mqtt, MQTT_VERSION_5, AsyncClient, ConnectOptionsBuilder, CreateOptionsBuilder};
-use std::time::Duration as StdDuration;
+use anyhow::Result;
+use paho_mqtt::{
+    AsyncClient, ConnectOptionsBuilder, CreateOptionsBuilder, SubscribeOptions, MQTT_VERSION_5,
+};
+use std::time::Duration;
 use tokio::time as tokio_time;
 
-pub async fn connect(mqtt_uri: &str, client_id: &str) -> mqtt::AsyncClient {
+pub async fn connect(mqtt_uri: &str, client_id: &str) -> AsyncClient {
     let create_opts = CreateOptionsBuilder::new()
         .server_uri(mqtt_uri)
         .client_id(client_id)
         .finalize();
 
-    let client = mqtt::AsyncClient::new(create_opts).expect("Failed to create MQTT client");
+    let client = AsyncClient::new(create_opts).expect("Failed to create MQTT client");
 
     let conn_opts = ConnectOptionsBuilder::with_mqtt_version(MQTT_VERSION_5)
-        .keep_alive_interval(StdDuration::from_secs(20))
+        .keep_alive_interval(Duration::from_secs(20))
         .finalize();
 
-    // Retry connecting to the MQTT broker until successful
+    // Retry logic with error handling and waiting
     loop {
         match client.connect(conn_opts.clone()).await {
             Ok(_) => {
                 println!("Successfully connected to MQTT broker at {}", mqtt_uri);
-                break;
+                break; // Successfully connected, exit the function
             }
             Err(e) => {
-                println!(
-                    "Failed to connect to MQTT broker: {:?}, retrying in 5 seconds...",
-                    e
-                );
-                tokio_time::sleep(StdDuration::from_secs(5)).await;
+                // Use anyhow to add context to the error before logging it
+                let error = anyhow::Error::new(e)
+                    .context("Failed to connect to MQTT broker, retrying in 5 seconds...");
+                println!("{}", error);
+
+                tokio_time::sleep(Duration::from_secs(5)).await;
             }
         }
     }
@@ -35,23 +39,34 @@ pub async fn connect(mqtt_uri: &str, client_id: &str) -> mqtt::AsyncClient {
     client
 }
 
-pub async fn subscribe(client: &mqtt::AsyncClient, topics: &[&str], qos: &[i32]) {
+pub async fn subscribe(client: &AsyncClient, topics: &[&str], qos: &[i32]) -> Result<()> {
     println!("Subscribing to topics: {:?}", topics);
-    let sub_opts = vec![mqtt::SubscribeOptions::with_retain_as_published(); topics.len()];
-    // Retry logic with error handling and waiting
+    let sub_opts = vec![SubscribeOptions::with_retain_as_published(); topics.len()];
+
+    let mut attempts = 0;
     loop {
+        attempts += 1;
         match client
             .subscribe_many_with_options(topics, qos, &sub_opts, None)
             .await
         {
             Ok(_) => {
                 println!("Successfully subscribed to topics: {:?}", topics);
-                break; // Exit loop on successful subscription
+                return Ok(());
             }
             Err(e) => {
-                eprintln!("Error subscribing to topics: {:?}, error: {}", topics, e);
+                eprintln!(
+                    "Attempt {}: Error subscribing to topics: {:?}, error: {}",
+                    attempts, topics, e
+                );
+                if attempts >= 5 {
+                    // Suppose we want to limit the number of attempts to 5
+                    return Err(anyhow::Error::new(e).context(
+                        "Exceeded maximum retry attempts for subscribing to MQTT topics",
+                    ));
+                }
                 // Wait for a bit before retrying. Adjust the duration as needed.
-                tokio_time::sleep(StdDuration::from_secs(5)).await;
+                tokio_time::sleep(Duration::from_secs(5)).await;
             }
         }
     }

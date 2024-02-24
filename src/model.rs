@@ -6,6 +6,7 @@ pub struct ArmMessage {
     pub matrices: Arm,
 }
 
+#[allow(non_snake_case)]
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct Arm {
     pub J1: Vec<Vec<f64>>,
