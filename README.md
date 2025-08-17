@@ -28,6 +28,7 @@ This service is designed to handle high-frequency telemetry data from robotic ar
 ## Data Model
 
 ### ArmMessage Structure
+
 ```rust
 {
   timestamp: i64,              // Unix timestamp in milliseconds
@@ -39,6 +40,7 @@ This service is designed to handle high-frequency telemetry data from robotic ar
 ```
 
 ### Database Schema
+
 - **Tables**: `left_arm`, `right_arm`
 - **Columns**:
   - `timestamp` (TIMESTAMPTZ): Time of data capture
@@ -54,23 +56,27 @@ This service is designed to handle high-frequency telemetry data from robotic ar
 ## Installation
 
 ### 1. Clone the Repository
+
 ```bash
 git clone <repository-url>
 cd subscribe-and-store
 ```
 
 ### 2. Set Up TimescaleDB
+
 ```bash
 cd db
 docker-compose up -d
 ```
 
 This will:
+
 - Start a TimescaleDB instance on port 5432
 - Create the database `sabino-ts`
 - Initialize hypertables for `left_arm` and `right_arm`
 
 ### 3. Configure Environment
+
 Create a `.env` file in the project root:
 
 ```env
@@ -83,6 +89,7 @@ RUST_SUB_MQTT_CLIENT_ID=rust_sub_mqtt_tsdb_client
 ```
 
 ### 4. Build and Run
+
 ```bash
 # Development
 cargo run
@@ -94,15 +101,16 @@ cargo build --release
 
 ## Configuration
 
-| Environment Variable | Description | Default |
-|---------------------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | Required |
-| `RUST_SUB_MQTT_URI` | MQTT broker URI | `tcp://localhost:1883` |
-| `RUST_SUB_MQTT_CLIENT_ID` | MQTT client identifier | `rust_sub_mqtt_tsdb_client` |
+| Environment Variable      | Description                  | Default                     |
+| ------------------------- | ---------------------------- | --------------------------- |
+| `DATABASE_URL`            | PostgreSQL connection string | Required                    |
+| `RUST_SUB_MQTT_URI`       | MQTT broker URI              | `tcp://localhost:1883`      |
+| `RUST_SUB_MQTT_CLIENT_ID` | MQTT client identifier       | `rust_sub_mqtt_tsdb_client` |
 
 ## Dependencies
 
 ### Core Dependencies
+
 - **paho-mqtt** (0.12): MQTT client with bundled C library
 - **tokio** (1.x): Async runtime with full features
 - **sqlx** (0.7.3): Async PostgreSQL driver with compile-time query verification
@@ -110,12 +118,14 @@ cargo build --release
 - **anyhow** (1.0): Error handling with context
 
 ### Database
+
 - **TimescaleDB**: PostgreSQL extension for time-series data
 - **PostgreSQL 16**: Latest stable release
 
 ## Development
 
 ### Project Structure
+
 ```
 subscribe-and-store/
 ├── src/
@@ -131,6 +141,7 @@ subscribe-and-store/
 ```
 
 ### Testing
+
 ```bash
 # Run tests
 cargo test
@@ -140,6 +151,7 @@ RUST_LOG=debug cargo run
 ```
 
 ### Performance Considerations
+
 - **QoS 0**: Used for maximum throughput (at-most-once delivery)
 - **Connection Pooling**: 5 database connections for concurrent writes
 - **Stream Buffer**: 25 messages buffered for processing
@@ -148,6 +160,7 @@ RUST_LOG=debug cargo run
 ## Monitoring
 
 The service provides console output for:
+
 - Connection status (MQTT and database)
 - Subscription confirmations
 - Reconnection attempts
@@ -163,6 +176,7 @@ The service provides console output for:
 ## Docker Deployment
 
 ### Building the Service Container
+
 ```dockerfile
 FROM rust:1.70 as builder
 WORKDIR /app
@@ -176,8 +190,9 @@ CMD ["subscribe-and-store"]
 ```
 
 ### Docker Compose Full Stack
+
 ```yaml
-version: "3.8"
+version: '3.8'
 services:
   app:
     build: .
@@ -198,11 +213,13 @@ services:
 ### Common Issues
 
 1. **Connection Refused to Database**
+
    - Verify TimescaleDB is running: `docker ps`
    - Check DATABASE_URL in `.env`
    - Ensure PostgreSQL port 5432 is not blocked
 
 2. **MQTT Connection Failed**
+
    - Verify MQTT broker is running
    - Check RUST_SUB_MQTT_URI configuration
    - Ensure network connectivity to broker
@@ -214,12 +231,4 @@ services:
 
 ## License
 
-[Add your license information here]
-
-## Contributing
-
-[Add contribution guidelines here]
-
-## Support
-
-For issues and questions, please [create an issue](link-to-issues) in the repository.
+[MIT License](./LICENSE)
